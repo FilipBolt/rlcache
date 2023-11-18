@@ -2,6 +2,7 @@ import logging
 from typing import Dict
 
 import time
+import numpy as np
 
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType, CacheInformation
@@ -12,8 +13,9 @@ from rlcache.strategies.caching_strategies.rl_caching_state import CachingAgentI
 from rlcache.strategies.caching_strategies.rl_caching_state_converter import CachingStrategyRLConverter
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
-from rlgraph.agents import Agent
-from rlgraph.spaces import FloatBox, IntBox
+
+# from rlgraph.agents import Agent
+# from rlgraph.spaces import FloatBox, IntBox
 
 
 class RLCachingStrategy(CachingStrategy):
@@ -34,9 +36,9 @@ class RLCachingStrategy(CachingStrategy):
         # action space: should cache: true or false
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
         fields_in_state = len(CachingAgentSystemState.__slots__)
-        self.agent = Agent.from_spec(agent_config,
-                                     state_space=FloatBox(shape=(fields_in_state,)),
-                                     action_space=IntBox(2))
+        # self.agent = Agent.from_spec(agent_config,
+        #                              state_space=FloatBox(shape=(fields_in_state,)),
+        #                              action_space=IntBox(2))
 
         self.logger = logging.getLogger(__name__)
         name = 'rl_caching_strategy'
@@ -59,13 +61,12 @@ class RLCachingStrategy(CachingStrategy):
                                         hit_count=0,
                                         step_code=0,
                                         operation_type=operation_type.value)
-
-        agent_action = self.agent.get_action(state.to_numpy())
-        incomplete_experience_entry = CachingAgentIncompleteExperienceEntry(state=state,
-                                                                            agent_action=agent_action,
-                                                                            starting_state=state.copy(),
-                                                                            observation_time=observation_time)
-
+        # agent_action = self.agent.get_action(state.to_numpy())
+        agent_action = np.array(np.random.randint(0, 2))
+        incomplete_experience_entry = CachingAgentIncompleteExperienceEntry(
+            state=state, agent_action=agent_action,
+            starting_state=state.copy(), observation_time=observation_time
+        )
         action = self.converter.agent_to_system_action(agent_action)
         self._incomplete_experiences.set(key, incomplete_experience_entry, ttl)
 
@@ -109,21 +110,29 @@ class RLCachingStrategy(CachingStrategy):
             # TODO add cache utility to state and reward
             pass
 
-        self.agent.observe(preprocessed_states=experience.starting_state.to_numpy(),
-                           actions=experience.agent_action,
-                           internals=[],
-                           rewards=reward,
-                           next_states=experience.state.to_numpy(),
-                           terminals=False)
+        # self.agent.observe(
+        #     preprocessed_states=experience.starting_state.to_numpy(),
+        #     actions=experience.agent_action,
+        #     internals=[],
+        #     rewards=reward,
+        #     next_states=experience.state.to_numpy(),
+        #     terminals=False
+        # )
 
         self.episode_reward += reward
         self.reward_logger.info(f'{self.episode_num},{reward}')
         self.logger.debug(f'Key: {key} is in terminal state because: {str(observation_type)}')
-        loss = self.agent.update()
+        # from rlgraph
+        # Performs an update on the computation graph either via externally experience or
+        # by sampling from an internal memory.
+        # Returns:
+        #     Union(list, tuple, float): The loss value calculated in this update.
+        # loss = self.agent.update()
+        loss = None
         if loss is not None:
             self.loss_logger.info(f'{self.episode_num},{loss[0]}')
 
     def close(self):
         super().close()
-        self.agent.reset()
+        # self.agent.reset()
         self._incomplete_experiences.clear()

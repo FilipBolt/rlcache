@@ -2,7 +2,8 @@ import logging
 from typing import Dict, List
 
 import time
-from pandas.tests.extension.numpy_.test_numpy_nested import np
+# from pandas.tests.extension.numpy_.test_numpy_nested import np
+import numpy as np
 from rlgraph.agents import Agent
 from rlgraph.spaces import FloatBox, IntBox
 
