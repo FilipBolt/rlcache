@@ -4,6 +4,10 @@ from typing import Dict
 import time
 import numpy as np
 
+import gym
+# from ray.rllib.algorithms.dqn.dqn import DQNConfig
+# from gym import spaces
+
 from rlcache.backend import TTLCache, InMemoryStorage
 from rlcache.cache_constants import OperationType, CacheInformation
 from rlcache.observer import ObservationType
@@ -14,8 +18,36 @@ from rlcache.strategies.caching_strategies.rl_caching_state_converter import Cac
 from rlcache.utils.loggers import create_file_logger
 from rlcache.utils.vocabulary import Vocabulary
 
-# from rlgraph.agents import Agent
-# from rlgraph.spaces import FloatBox, IntBox
+from rlgraph.agents import Agent
+from rlgraph.spaces import FloatBox, IntBox
+
+
+class CustomEnvironment(gym.Env):
+    def __init__(self, config):
+        super(CustomEnvironment, self).__init__()
+        self.action_space = spaces.Discrete(2)  # Example action space with two discrete actions
+        self.observation_space = spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32)  # Example observation space with four continuous features
+        self.state = None  # Initialize your state
+
+    def reset(self):
+        # Reset the environment to the initial state
+        self.state = np.zeros(4)
+        return self.state
+
+    def step(self, action):
+        # Take a step in the environment based on the given action
+        # Update the state and compute the reward, done, and info
+        reward = 0.0
+        done = False
+        info = {}
+
+        # Implement your custom logic here
+
+        return self.state, reward, done, info
+
+    def render(self, mode='human'):
+        # Implement rendering (optional)
+        pass
 
 
 class RLCachingStrategy(CachingStrategy):
@@ -26,6 +58,7 @@ class RLCachingStrategy(CachingStrategy):
         self.observation_seen = 0
         self.episode_reward = 0
         self.checkpoint_steps = config['checkpoint_steps']
+        self.config = config
 
         self._incomplete_experiences = TTLCache(InMemoryStorage())
         self._incomplete_experiences.expired_entry_callback(self._observe_expired_incomplete_experience)
@@ -33,12 +66,26 @@ class RLCachingStrategy(CachingStrategy):
         self.experimental_reward = config.get('experimental_reward', False)
         agent_config = config['agent_config']
         self.converter = CachingStrategyRLConverter()
+
         # action space: should cache: true or false
         # state space: [capacity (1), query key(1), query result set(num_indexes)]
         fields_in_state = len(CachingAgentSystemState.__slots__)
-        # self.agent = Agent.from_spec(agent_config,
-        #                              state_space=FloatBox(shape=(fields_in_state,)),
-        #                              action_space=IntBox(2))
+        # convert config to rllib config
+
+        config = {
+            'env': 'CustomEnv-v0',
+            'num_workers': 2,
+            'framework': 'torch',  # Specify 'torch' as the framework for DQN
+            'model': {
+                'fcnet_hiddens': [256, 256],  # Adjust the hidden layers of the DQN model
+            },
+            'dueling': False,  # Set to True for a dueling DQN
+            'prioritized_replay': False,  # Set to True for prioritized experience replay
+            # Add other DQN-specific configuration options as needed
+        }
+        self.agent = Agent.from_spec(agent_config,
+                                     state_space=FloatBox(shape=(fields_in_state,)),
+                                     action_space=IntBox(2))
 
         self.logger = logging.getLogger(__name__)
         name = 'rl_caching_strategy'
@@ -72,7 +119,9 @@ class RLCachingStrategy(CachingStrategy):
 
         return action
 
-    def observe(self, key: str, observation_type: ObservationType, info: Dict[str, any]):
+    def observe(
+        self, key: str, observation_type: ObservationType, info: Dict[str, any]
+    ):
         # TODO include stats/capacity information in the info dict
         experience = self._incomplete_experiences.get(key)  # type: CachingAgentIncompleteExperienceEntry
         if experience is None:
@@ -109,6 +158,12 @@ class RLCachingStrategy(CachingStrategy):
         if self.experimental_reward:
             # TODO add cache utility to state and reward
             pass
+
+        # agent.observe
+        # Observes an experience tuple or a batch of experience tuples. Note: If configured,
+        # first uses buffers and then internally calls _observe_graph() to actually run the computation graph.
+        # If buffering is disabled, this just routes the call to the respective `_observe_graph()` method of the
+        # child Agent.
 
         # self.agent.observe(
         #     preprocessed_states=experience.starting_state.to_numpy(),

@@ -9,21 +9,29 @@ from rlcache.strategies.strategies_from_config import strategies_from_config
 
 class CacheManager(object):
 
-    def __init__(self, config: Dict[str, any], cache: TTLCache, backend: Storage, result_dir: str):
+    def __init__(
+        self, config: Dict[str, any], cache: TTLCache,
+        backend: Storage, result_dir: str
+    ):
         self.cache = cache
         self.backend = backend
-        self.cache_stats = CacheInformation(cache.capacity(), size_check_func=cache.size)
-        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(config,
-                                                                                                  result_dir,
-                                                                                                  self.cache_stats)
+        self.cache_stats = CacheInformation(
+            cache.capacity(), size_check_func=cache.size
+        )
+        self.caching_strategy, self.eviction_strategy, self.ttl_strategy = strategies_from_config(
+            config, result_dir, self.cache_stats
+        )
         if 'multi_strategy_settings' in config:
             # any of the strategies work for multi-strategy
-            self.observer_orchestrator = ObserversOrchestrator([self.caching_strategy], result_dir, self.cache_stats)
+            self.observer_orchestrator = ObserversOrchestrator(
+                [self.caching_strategy], result_dir, self.cache_stats
+            )
             self.multi_strategy = True
         else:
-            self.observer_orchestrator = ObserversOrchestrator([self.caching_strategy,
-                                                                self.eviction_strategy,
-                                                                self.ttl_strategy], result_dir, self.cache_stats)
+            self.observer_orchestrator = ObserversOrchestrator(
+                [self.caching_strategy, self.eviction_strategy, self.ttl_strategy],
+                result_dir, self.cache_stats
+            )
             self.multi_strategy = False
 
         self.cache.expired_entry_callback(self.observer_orchestrator.observe)
