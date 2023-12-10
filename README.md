@@ -17,3 +17,20 @@ This code supplement a thesis submited on arXiv.
     primaryClass={cs.LG}
 }
 ```
+
+
+# Running workloads
+
+First, start the server by executing the script
+
+```
+sh start_dev_env.sh
+```
+
+Then, configure and run the workloads, for example default workload A
+
+```
+sh generate_load.sh ycsb/ycsb-0.17.0/workloads/workloada
+```
+
+Modify the workload definition file to change the workload parameters. 
