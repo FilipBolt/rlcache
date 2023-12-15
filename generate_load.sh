@@ -18,7 +18,8 @@ echo "YCSB_WORKLOAD_PATH: $YCSB_WORKLOAD_PATH"
 
 # generate load
 
-$YCSB_BIN_PATH load basic -P $YCSB_WORKLOAD_PATH 
+$YCSB_BIN_PATH load basic -P $YCSB_WORKLOAD_PATH > input.log
 $YCSB_BIN_PATH run basic -P $YCSB_WORKLOAD_PATH > workload.log
 
+python load_generator.py input.log
 python load_generator.py workload.log
