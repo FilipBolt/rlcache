@@ -306,21 +306,25 @@ def calculate_hitrate(directory: str, q95=False) -> Tuple[pd.Series, pd.Series]:
     write_ratio_df = pd.DataFrame({'write_ratio': [0, 5, 10, 25, 50, 100]})
     write_ratio_df = write_ratio_df.set_index('write_ratio')
 
-    for sub_dir in sub_dirs:
-        stats_df = pd.read_csv(f'{directory}/{sub_dir}/evaluation_logger.log',
-                               names=['timestamp', 'key', 'observation', 'episode'],
-                               usecols=['episode', 'observation', 'key'])
-        if q95:
-            stats = stats_df.groupby(['episode', 'observation', (stats_df.index // 10000)]).count().unstack(0)[
-                'key'].fillna(0).transpose()
-            hit_ratio_all = (stats['Hit'] / 10000).quantile(0.95, axis=1)
-        else:
-            stats = stats_df.groupby(['episode', 'observation']).count().unstack(0)['key'].fillna(0).transpose()
-            hit_ratio_all = stats['Hit'] / stats.sum(axis=1)
+    try:
 
-        print(f'{directory}/{sub_dir}')
-        hit_ratio_all.index = write_ratio_df.index
-        write_ratio_df[sub_dir] = hit_ratio_all
+        for sub_dir in sub_dirs:
+            stats_df = pd.read_csv(f'{directory}/{sub_dir}/evaluation_logger.log',
+                                   names=['timestamp', 'key', 'observation', 'episode'],
+                                   usecols=['episode', 'observation', 'key'])
+            if q95:
+                stats = stats_df.groupby(['episode', 'observation', (stats_df.index // 10000)]).count().unstack(0)[
+                    'key'].fillna(0).transpose()
+                hit_ratio_all = (stats['Hit'] / 10000).quantile(0.95, axis=1)
+            else:
+                stats = stats_df.groupby(['episode', 'observation']).count().unstack(0)['key'].fillna(0).transpose()
+                hit_ratio_all = stats['Hit'] / stats.sum(axis=1)
+
+            print(f'{directory}/{sub_dir}')
+            hit_ratio_all.index = write_ratio_df.index
+            write_ratio_df[sub_dir] = hit_ratio_all
+    except Exception as e:
+        import pdb; pdb.set_trace()
 
     means = write_ratio_df.mean(axis=1)
     errors = write_ratio_df.std(axis=1)
