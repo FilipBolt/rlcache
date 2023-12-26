@@ -268,7 +268,8 @@ def calculate_cache_rate(directory: str):
                                                      'cache_utility'])
         if time.strptime(sub_dir, '%Y_%m_%d_%H_%M') < time.strptime(TIME_OF_FIX_IMPLEMENTATION, '%Y_%m_%d_%H_%M'):
             end_of_episode_stats_df = fix_cummulative_sum_in_EOE_logger(end_of_episode_stats_df)
-        cache_rate = end_of_episode_stats_df['should_cache_ratio'].drop(0)
+        # cache_rate = end_of_episode_stats_df['should_cache_ratio'].drop(0)
+        cache_rate = end_of_episode_stats_df['should_cache_ratio']
         cache_rate.index = write_ratio_df.index
         write_ratio_df[sub_dir] = cache_rate
 

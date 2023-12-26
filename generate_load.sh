@@ -22,4 +22,5 @@ $YCSB_BIN_PATH load basic -P $YCSB_WORKLOAD_PATH > input.log
 $YCSB_BIN_PATH run basic -P $YCSB_WORKLOAD_PATH > workload.log
 
 python load_generator.py input.log
+curl localhost:5000/end_loading_phase
 python load_generator.py workload.log
